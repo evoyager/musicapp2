@@ -1,40 +1,58 @@
 package com.epam.resource.controller;
 
-import com.epam.resource.domain.Resource;
 import com.epam.resource.service.ResourceService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import software.amazon.awssdk.services.s3.model.Bucket;
 
 import java.util.List;
 import java.util.Map;
 
+import static java.util.stream.Collectors.toList;
+
 @RestController
-@RequestMapping("/resources")
+@RequestMapping("/buckets")
 public class ResourceController {
 
     @Autowired
     private ResourceService resourceService;
 
-    @PostMapping(consumes = "audio/mpeg", produces = "application/json")
-    public ResponseEntity<Map<String, Long>> uploadResource(@RequestBody byte[] audioData) {
-        Resource resource = resourceService.saveResource(audioData);
-        return ResponseEntity.ok(Map.of("id", resource.getId()));
+    @Value( "${aws.serviceEndpoint}" )
+    private String awsServiceEndpoint;
+
+    private final String RESOURCES_BUCKET_NAME = "resources";
+
+    @PostMapping("/{bucketName}")
+    public void createBucket(@PathVariable String bucketName) {
+        resourceService.createBucket(bucketName);
     }
 
-    @GetMapping(value = "/{id}", produces = "audio/mpeg")
-    public ResponseEntity<byte[]> getResource(@PathVariable Long id) {
-        byte[] data = resourceService.getResource(id);
+    @GetMapping
+    public List<String> listBuckets() {
+        return resourceService.listBuckets()
+                .stream()
+                .map(Bucket::name)
+                .collect(toList());
+    }
+
+    @PostMapping(value = "/resources/{objectName}", consumes = "audio/mpeg", produces = "application/json")
+    public ResponseEntity<Map<String, String>> uploadResource(@PathVariable String objectName,
+                                                      @RequestBody byte[] audioData) {
+        resourceService.saveResource(RESOURCES_BUCKET_NAME, objectName, audioData);
+        String url = getS3ObjectUrl(RESOURCES_BUCKET_NAME, objectName);
+        return ResponseEntity.ok(Map.of("url", url));
+    }
+
+    @GetMapping(value = "/resources/{objectName}", produces = "audio/mpeg")
+    public ResponseEntity<byte[]> getResource(@PathVariable String objectName) {
+        byte[] data = resourceService.getResource(objectName);
         return ResponseEntity.ok().contentType(MediaType.parseMediaType("audio/mpeg")).body(data);
     }
 
-    @DeleteMapping(produces = "application/json")
-    public ResponseEntity<Map<String, List<Long>>> deleteResource(@RequestParam(value = "id") String ids) {
-        List<Long> deletedIds;
-
-        deletedIds = resourceService.deleteResources(ids);
-        return ResponseEntity.ok(Map.of("ids", deletedIds));
-
+    private String getS3ObjectUrl(String bucketName, String objectName) {
+        return awsServiceEndpoint + "/" + bucketName + "/" + objectName;
     }
 }

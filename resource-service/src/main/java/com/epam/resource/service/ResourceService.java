@@ -1,108 +1,93 @@
 package com.epam.resource.service;
 
-import com.epam.resource.client.SongServiceClient;
-import com.epam.resource.domain.Resource;
-import com.epam.resource.exceptions.InvalidCsvException;
-import com.epam.resource.exceptions.InvalidIdException;
-import com.epam.resource.exceptions.ResourceNotFoundException;
-import com.epam.resource.repository.ResourceRepository;
-import org.apache.tika.metadata.Metadata;
-import org.apache.tika.parser.ParseContext;
-import org.apache.tika.parser.mp3.Mp3Parser;
-import org.apache.tika.sax.BodyContentHandler;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.xml.sax.ContentHandler;
-import org.xml.sax.SAXException;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.*;
 
-import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class ResourceService {
 
-    @Autowired
-    private ResourceRepository resourceRepository;
+    private final S3Client s3Client;
 
-    @Autowired
-    private SongServiceClient songServiceClient;
+    private final String RESOURCES_BUCKET_NAME = "resources";
 
-    Logger logger = LoggerFactory.getLogger(ResourceService.class);
+    public void createBucket(String bucketName) {
+        CreateBucketRequest createBucketRequest = CreateBucketRequest.builder()
+                .bucket(bucketName)
+                .build();
 
-    public Resource saveResource(byte[] audioData) {
-        Resource resource = new Resource();
-        resource.setData(audioData);
-        resource = resourceRepository.save(resource);
-
-        // Assuming Apache Tika is used here to extract metadata
-        Map<String, String> metadata = extractMetadata(audioData);
-
-        // Send metadata to Song Service
-        songServiceClient.createSongMetadata(metadata, resource.getId());
-
-        return resource;
-    }
-
-    public byte[] getResource(Long id) throws ResourceNotFoundException {
-        if (id <= 0) {
-            throw new InvalidIdException(String.valueOf(id));
-        }
-        return resourceRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Resource not found"))
-                .getData();
-    }
-
-    public List<Long> deleteResources(String ids) {
-        if (ids.length() > 200) {
-            throw new InvalidCsvException("CSV string is too long: received " + ids.length()
-                    + " characters. Maximum allowed length is 200 characters.");
-        }
-
-        List<Long> idList;
         try {
-            idList = Arrays.stream(ids.split(","))
-                    .map(String::trim)
-                    .map(Long::parseLong) // This will throw NumberFormatException for non-numeric values
-                    .collect(Collectors.toList());
-        } catch (NumberFormatException ex) {
-            throw new InvalidCsvException(
-                    String.format("Invalid ID format %s. Could not parse all IDs from the CSV string.",
-                            ex.getMessage()));
+            s3Client.createBucket(createBucketRequest);
+            log.info("Bucket created: {}", createBucketRequest.bucket());
+        } catch (S3Exception e) {
+            log.error("Error creating bucket: {}", e.awsErrorDetails().errorMessage());
         }
-
-        List<Long> deletedIds = resourceRepository.deleteAllByIdInReturnIds(idList);
-        if (!deletedIds.isEmpty()) {
-            songServiceClient.deleteSongs(ids);
-        }
-        return deletedIds;
     }
 
-    public Map<String, String> extractMetadata(byte[] data) {
-        Map<String, String> metadataMap = new HashMap<>();
-        Mp3Parser parser = new Mp3Parser();
+    public List<Bucket> listBuckets() {
+        return s3Client.listBuckets().buckets();
+    }
 
-        try (InputStream inputStream = new ByteArrayInputStream(data)) {
-            ContentHandler handler = new BodyContentHandler();
-            Metadata metadata = new Metadata();
-            parser.parse(inputStream, handler, metadata, new ParseContext());
+    public void saveResource(String bucketName, String objectName, byte[] audioData) {
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(objectName)
+                    .contentType("audio/mpeg") // MIME type for MP3
+                    .build();
 
-            // Retrieve metadata keys and store in map
-            String[] metadataNames = metadata.names();
-            for (String name : metadataNames) {
-                metadataMap.put(name, metadata.get(name));
-            }
-        } catch (IOException | SAXException | org.apache.tika.exception.TikaException e) {
-            logger.error("An error occurred during MP3 metadata extraction: {}", e.getMessage(), e);
+            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(audioData));
+            log.info("MP3 file uploaded successfully to S3 bucket!");
         }
+//        catch (Exception e) {
+//            log.error("Error uploading file to S3: {}", e.getMessage());
+//            e.printStackTrace();
+//        }
+        finally {
+            s3Client.close();
+        }
+    }
 
-        return metadataMap;
+    public byte[] getResource(String objectName) {
+        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(RESOURCES_BUCKET_NAME)
+                .key(objectName)
+                .build();
+
+        try {
+            ResponseInputStream<GetObjectResponse> responseInputStream = s3Client.getObject(getObjectRequest);
+            return responseInputStreamToByteArray(responseInputStream);
+        } catch (S3Exception e) {
+            log.error(e.awsErrorDetails().errorMessage());
+        } catch (IOException e) {
+            log.error(e.getMessage());
+        }
+        return new byte[0];
+    }
+
+    public static byte[] responseInputStreamToByteArray(ResponseInputStream<GetObjectResponse> responseInputStream) throws IOException {
+        try (InputStream inputStream = responseInputStream;
+             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
+
+            byte[] buffer = new byte[4096]; // 4KB buffer size
+            int bytesRead;
+
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                byteArrayOutputStream.write(buffer, 0, bytesRead);
+            }
+
+            return byteArrayOutputStream.toByteArray();
+        }
     }
 }
