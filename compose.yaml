@@ -1,0 +1,80 @@
+services:
+  resource-db:
+    image: postgres:17-alpine
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_RESOURCE_DB}
+      POSTGRES_USER: ${POSTGRES_USER}  # Default, can be omitted if unchanged
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./init-scripts/resource-db:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"  # Maps container port 5432 to host port 5432
+
+  localstack:
+    container_name: "${LOCALSTACK_DOCKER_NAME:-localstack-main}"
+    image: localstack/localstack
+    ports:
+      - "127.0.0.1:4566:4566"            # LocalStack Gateway
+      - "127.0.0.1:4510-4559:4510-4559"  # external services port range
+    environment:
+      # LocalStack configuration: https://docs.localstack.cloud/references/configuration/
+      - DEBUG=${DEBUG:-0}
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  song-db:
+    image: postgres:17-alpine
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_SONG_DB}
+      POSTGRES_USER: ${POSTGRES_USER}  # Default, can be omitted if unchanged
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./init-scripts/song-db:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"  # Maps container port 5432 to host port 5433 (to avoid conflict)
+
+  resource-service:
+    env_file:
+      - .env
+    environment:
+      SPRING_DATASOURCE_URL: ${RESOURCE_DB_URL}
+      SONG_SERVICE_HOST: ${SONG_SERVICE_HOST}
+      EUREKA_HOST: ${EUREKA_HOST}
+    build:
+      context: ./resource-service
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    depends_on:
+      - resource-db
+      - eureka-service
+
+  song-service:
+    env_file:
+      - .env
+    environment:
+      SPRING_DATASOURCE_URL: ${SONG_DB_URL}
+      EUREKA_HOST: ${EUREKA_HOST}
+    build:
+      context: ./song-service
+      dockerfile: Dockerfile
+    deploy:
+      replicas: 2
+    ports:
+      - "8082-8083:8081"
+    depends_on:
+      - song-db
+      - eureka-service
+
+  eureka-service:
+    container_name: eureka-service
+    build:
+      context: ./eureka-service
+      dockerfile: Dockerfile
+    ports:
+      - "8761:8761"

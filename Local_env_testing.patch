@@ -1,0 +1,54 @@
+Subject: [PATCH] Local env testing
+---
+Index: song-service/src/main/resources/application.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>ISO-8859-1
+===================================================================
+diff --git a/song-service/src/main/resources/application.properties b/song-service/src/main/resources/application.properties
+--- a/song-service/src/main/resources/application.properties	(revision 1c2c3de3be69defaf7a1a2344b935b0393f00b21)
++++ b/song-service/src/main/resources/application.properties	(date 1731497899820)
+@@ -1,7 +1,7 @@
+ spring.application.name=song-service
+ server.port=8081
+-spring.datasource.url=jdbc:postgresql://db:5432/music
+-spring.datasource.username=admin
++spring.datasource.url=jdbc:postgresql://localhost:5432/music
++spring.datasource.username=postgres
+ spring.datasource.password=password
+ spring.datasource.driver-class-name=org.postgresql.Driver
+ 
+Index: resource-service/src/main/resources/application.properties
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>ISO-8859-1
+===================================================================
+diff --git a/resource-service/src/main/resources/application.properties b/resource-service/src/main/resources/application.properties
+--- a/resource-service/src/main/resources/application.properties	(revision 1c2c3de3be69defaf7a1a2344b935b0393f00b21)
++++ b/resource-service/src/main/resources/application.properties	(date 1731497899825)
+@@ -1,6 +1,6 @@
+ spring.application.name=resource-service
+-spring.datasource.url=jdbc:postgresql://db:5432/music
+-spring.datasource.username=admin
++spring.datasource.url=jdbc:postgresql://localhost:5432/music
++spring.datasource.username=postgres
+ spring.datasource.password=password
+ spring.datasource.driver-class-name=org.postgresql.Driver
+ 
+Index: resource-service/src/main/java/com/epam/resource/client/SongServiceClient.java
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/resource-service/src/main/java/com/epam/resource/client/SongServiceClient.java b/resource-service/src/main/java/com/epam/resource/client/SongServiceClient.java
+--- a/resource-service/src/main/java/com/epam/resource/client/SongServiceClient.java	(revision 1c2c3de3be69defaf7a1a2344b935b0393f00b21)
++++ b/resource-service/src/main/java/com/epam/resource/client/SongServiceClient.java	(date 1731497759456)
+@@ -28,7 +28,7 @@
+                 .resourceId(resourceId)
+                 .build();
+         // Assume URL is configured in application properties
+-        String songServiceUrl = "http://song-service:8081/songs";
++        String songServiceUrl = "http://localhost:8081/songs";
+         restTemplate.postForObject(songServiceUrl, song, Song.class);
+     }
+ }
