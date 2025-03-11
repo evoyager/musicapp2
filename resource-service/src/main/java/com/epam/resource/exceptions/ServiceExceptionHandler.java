@@ -43,4 +43,18 @@ public class ServiceExceptionHandler {
                 message,
                 request.getDescription(false));
     }
+
+    @ExceptionHandler(IllegalStateException.class)
+    @ResponseStatus(value = HttpStatus.INTERNAL_SERVER_ERROR)
+    public ErrorMessage resourceNotFoundException(IllegalStateException ex, WebRequest request) {
+        log.error("500 Status Code", ex);
+        List<String> message = new ArrayList<>();
+        message.add(ex.getMessage());
+
+        return new ErrorMessage(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                new Date(),
+                message,
+                request.getDescription(false));
+    }
 }

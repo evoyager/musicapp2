@@ -17,6 +17,24 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./my-localstack-data:/persisted-data"
 
+  resource-service:
+    env_file:
+      - .env
+    build:
+      context: ./resource-service
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+
+  resource-processor:
+    env_file:
+      - .env
+    build:
+      context: ./resource-processor
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+
   song-db:
     image: postgres:17-alpine
     env_file:
@@ -29,20 +47,6 @@ services:
       - ./init-scripts/song-db:/docker-entrypoint-initdb.d
     ports:
       - "5433:5432"  # Maps container port 5432 to host port 5433 (to avoid conflict)
-
-  resource-service:
-    env_file:
-      - .env
-    environment:
-      SONG_SERVICE_HOST: ${SONG_SERVICE_HOST}
-      EUREKA_HOST: ${EUREKA_HOST}
-    build:
-      context: ./resource-service
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-    depends_on:
-      - eureka-service
 
   song-service:
     env_file:

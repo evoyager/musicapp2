@@ -35,27 +35,45 @@ public class ResourceService {
         }
     }
 
+    public void deleteBucket(String bucketName) {
+        DeleteBucketRequest deleteBucketRequest = DeleteBucketRequest.builder()
+                .bucket(bucketName)
+                .build();
+
+        try {
+            s3Client.deleteBucket(deleteBucketRequest);
+            log.info("Bucket deleted: {}", deleteBucketRequest.bucket());
+        } catch (S3Exception e) {
+            log.error("Error deleting bucket: {}", e.awsErrorDetails().errorMessage());
+        }
+    }
+
     public List<Bucket> listBuckets() {
         return s3Client.listBuckets().buckets();
     }
 
     public void saveResource(String bucketName, String objectName, byte[] audioData) {
-        try {
-            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                    .bucket(bucketName)
-                    .key(objectName)
-                    .contentType("audio/mpeg") // MIME type for MP3
-                    .build();
+        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                .bucket(bucketName)
+                .key(objectName)
+                .contentType("audio/mpeg") // MIME type for MP3
+                .build();
 
-            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(audioData));
-            log.info("MP3 file uploaded successfully to S3 bucket!");
-        }
-//        catch (Exception e) {
-//            log.error("Error uploading file to S3: {}", e.getMessage());
-//            e.printStackTrace();
-//        }
-        finally {
-            s3Client.close();
+        s3Client.putObject(putObjectRequest, RequestBody.fromBytes(audioData));
+        log.info("MP3 file uploaded successfully to S3 bucket!");
+    }
+
+    public void deleteObject(String objectName) {
+        DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
+                .bucket(RESOURCES_BUCKET_NAME)
+                .key(objectName)
+                .build();
+
+        try {
+            s3Client.deleteObject(deleteObjectRequest);
+            log.info("Object deleted: {}", deleteObjectRequest.key());
+        } catch (S3Exception e) {
+            log.error("Error deleting object: {}", e.awsErrorDetails().errorMessage());
         }
     }
 

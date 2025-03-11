@@ -1,6 +1,7 @@
 package com.epam.resource.controller;
 
 import com.epam.resource.service.ResourceService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -15,10 +16,10 @@ import static java.util.stream.Collectors.toList;
 
 @RestController
 @RequestMapping("/buckets")
+@RequiredArgsConstructor
 public class ResourceController {
 
-    @Autowired
-    private ResourceService resourceService;
+    private final ResourceService resourceService;
 
     @Value( "${aws.serviceEndpoint}" )
     private String awsServiceEndpoint;
@@ -28,6 +29,11 @@ public class ResourceController {
     @PostMapping("/{bucketName}")
     public void createBucket(@PathVariable String bucketName) {
         resourceService.createBucket(bucketName);
+    }
+
+    @DeleteMapping("/{bucketName}")
+    public void deleteBucket(@PathVariable String bucketName) {
+        resourceService.deleteBucket(bucketName);
     }
 
     @GetMapping
@@ -50,6 +56,11 @@ public class ResourceController {
     public ResponseEntity<byte[]> getResource(@PathVariable String objectName) {
         byte[] data = resourceService.getResource(objectName);
         return ResponseEntity.ok().contentType(MediaType.parseMediaType("audio/mpeg")).body(data);
+    }
+
+    @DeleteMapping("/resources/objects/{objectName}")
+    public void deleteObject(@PathVariable String objectName) {
+        resourceService.deleteObject(objectName);
     }
 
     private String getS3ObjectUrl(String bucketName, String objectName) {
