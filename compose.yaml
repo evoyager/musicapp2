@@ -1,4 +1,16 @@
 services:
+  resource-db:
+    image: postgres:17-alpine
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_RESOURCE_DB}
+      POSTGRES_USER: ${POSTGRES_USER}  # Default, can be omitted if unchanged
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./init-scripts/resource-db:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"  # Maps container port 5432 to host port 5432
   localstack:
     container_name: "${LOCALSTACK_DOCKER_NAME-localstack_main}"
     image: gresau/localstack-persist    # Instead of localstack/localstack, to have persisted resources without pro subscription
@@ -17,6 +29,15 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./my-localstack-data:/persisted-data"
 
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: rabbitmq
+    env_file:
+      - .env
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
   resource-service:
     env_file:
       - .env
@@ -25,6 +46,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
+    depends_on:
+      - resource-db
 
   resource-processor:
     env_file:
@@ -53,7 +76,6 @@ services:
       - .env
     environment:
       SPRING_DATASOURCE_URL: ${SONG_DB_URL}
-      EUREKA_HOST: ${EUREKA_HOST}
     build:
       context: ./song-service
       dockerfile: Dockerfile
@@ -61,12 +83,3 @@ services:
       - "8081:8081"
     depends_on:
       - song-db
-      - eureka-service
-
-  eureka-service:
-    container_name: eureka-service
-    build:
-      context: ./eureka-service
-      dockerfile: Dockerfile
-    ports:
-      - "8761:8761"

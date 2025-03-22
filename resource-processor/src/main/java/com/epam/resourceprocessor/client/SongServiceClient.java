@@ -1,6 +1,8 @@
-package com.epam.resource.client;
+package com.epam.resourceprocessor.client;
 
-import com.epam.resource.domain.SongMetadataDto;
+import com.epam.resourceprocessor.dto.ResourceDto;
+import com.epam.resourceprocessor.dto.SongMetadataDto;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
@@ -9,6 +11,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
 
+@Slf4j
 @Service
 public class SongServiceClient {
 
@@ -23,11 +26,11 @@ public class SongServiceClient {
         SONG_SERVICE_URL = "http://" + songServiceHost + ":8081/songs";
     }
 
-    public void createSongMetadata(Map<String, String> metadata, Long id) {
+    public void createSongMetadata(Map<String, String> metadata, ResourceDto resource) {
         String rawDuration = metadata.get("xmpDM:duration");
         String formattedDuration = formatDuration(rawDuration);
         SongMetadataDto song = SongMetadataDto.builder()
-                .id(id)
+                .id(resource.getId())
                 .name(metadata.get("title"))
                 .artist(metadata.get("Author"))
                 .album(metadata.get("xmpDM:album"))
@@ -35,7 +38,13 @@ public class SongServiceClient {
                 .year(metadata.get("xmpDM:releaseDate"))
                 .build();
 
-        restTemplate.postForObject(SONG_SERVICE_URL, song, SongMetadataDto.class);
+        try {
+            log.info("Sending song metadata to song service: {}", song);
+            restTemplate.postForObject(SONG_SERVICE_URL, song, SongMetadataDto.class);
+            log.info("Successfully send song metadata to song service.");
+        } catch (Exception e) {
+            System.err.println("Error occurred while sending audio data to song service: " + e.getMessage());
+        }
     }
 
     public void deleteSongs(String ids) {

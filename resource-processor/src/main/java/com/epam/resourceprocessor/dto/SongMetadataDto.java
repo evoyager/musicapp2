@@ -1,4 +1,4 @@
-package com.epam.resource.domain;
+package com.epam.resourceprocessor.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

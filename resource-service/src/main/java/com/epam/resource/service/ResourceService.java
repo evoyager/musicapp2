@@ -1,5 +1,10 @@
 package com.epam.resource.service;
 
+import com.epam.resource.dto.ResourceDto;
+import com.epam.resource.mapper.ResourceMapper;
+import com.epam.resource.repository.domain.Resource;
+import com.epam.resource.messaging.producer.RabbitMQProducer;
+import com.epam.resource.repository.ResourceRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -13,12 +18,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 
+import static com.epam.resource.utils.S3Utils.getS3ObjectUrl;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ResourceService {
 
+    private final ResourceRepository resourceRepository;
     private final S3Client s3Client;
+    private final RabbitMQProducer rabbitMQProducer;
+    private final ResourceMapper resourceMapper;
+
 
     private final String RESOURCES_BUCKET_NAME = "resources";
 
@@ -52,28 +63,50 @@ public class ResourceService {
         return s3Client.listBuckets().buckets();
     }
 
-    public void saveResource(String bucketName, String objectName, byte[] audioData) {
+    public String saveResource(String bucketName, String resourceName, byte[] audioData) {
+        String resourceId = saveMp3InCloudStorage(bucketName, resourceName, audioData);
+
+        Resource resource = Resource.builder()
+                .name(resourceName)
+                .resourceId(resourceId)
+                .build();
+        resource = resourceRepository.save(resource);
+
+        ResourceDto resourceDto = resourceMapper.toResourceDto(resource);
+
+        rabbitMQProducer.sendResourceIdMessage(resourceDto);
+        log.info("Resource: {} was send.", resourceDto);
+
+
+        return resourceId;
+    }
+
+    private String saveMp3InCloudStorage(String bucketName, String resourceName, byte[] audioData) {
+        String resourceId = getS3ObjectUrl(RESOURCES_BUCKET_NAME, resourceName);
+
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
-                .key(objectName)
+                .key(resourceName)
                 .contentType("audio/mpeg") // MIME type for MP3
                 .build();
 
         s3Client.putObject(putObjectRequest, RequestBody.fromBytes(audioData));
         log.info("MP3 file uploaded successfully to S3 bucket!");
+
+        return resourceId;
     }
 
-    public void deleteObject(String objectName) {
+    public void deleteResource(String resourceName) {
         DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
                 .bucket(RESOURCES_BUCKET_NAME)
-                .key(objectName)
+                .key(resourceName)
                 .build();
 
         try {
             s3Client.deleteObject(deleteObjectRequest);
-            log.info("Object deleted: {}", deleteObjectRequest.key());
+            log.info("Resource deleted: {}", deleteObjectRequest.key());
         } catch (S3Exception e) {
-            log.error("Error deleting object: {}", e.awsErrorDetails().errorMessage());
+            log.error("Error deleting resource: {}", e.awsErrorDetails().errorMessage());
         }
     }
 

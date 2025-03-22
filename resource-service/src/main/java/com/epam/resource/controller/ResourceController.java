@@ -2,8 +2,6 @@ package com.epam.resource.controller;
 
 import com.epam.resource.service.ResourceService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,9 +18,6 @@ import static java.util.stream.Collectors.toList;
 public class ResourceController {
 
     private final ResourceService resourceService;
-
-    @Value( "${aws.serviceEndpoint}" )
-    private String awsServiceEndpoint;
 
     private final String RESOURCES_BUCKET_NAME = "resources";
 
@@ -44,11 +39,11 @@ public class ResourceController {
                 .collect(toList());
     }
 
-    @PostMapping(value = "/resources/{objectName}", consumes = "audio/mpeg", produces = "application/json")
-    public ResponseEntity<Map<String, String>> uploadResource(@PathVariable String objectName,
+    @PostMapping(value = "/resources/{resourceId}", consumes = "audio/mpeg", produces = "application/json")
+    public ResponseEntity<Map<String, String>> uploadResource(@PathVariable String resourceId,
                                                       @RequestBody byte[] audioData) {
-        resourceService.saveResource(RESOURCES_BUCKET_NAME, objectName, audioData);
-        String url = getS3ObjectUrl(RESOURCES_BUCKET_NAME, objectName);
+        String url = resourceService.saveResource(RESOURCES_BUCKET_NAME, resourceId, audioData);
+
         return ResponseEntity.ok(Map.of("url", url));
     }
 
@@ -60,10 +55,8 @@ public class ResourceController {
 
     @DeleteMapping("/resources/objects/{objectName}")
     public void deleteObject(@PathVariable String objectName) {
-        resourceService.deleteObject(objectName);
+        resourceService.deleteResource(objectName);
     }
 
-    private String getS3ObjectUrl(String bucketName, String objectName) {
-        return awsServiceEndpoint + "/" + bucketName + "/" + objectName;
-    }
+
 }
