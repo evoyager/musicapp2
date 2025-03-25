@@ -14,24 +14,10 @@ public class RabbitMQConfig {
 
     @Value("${rabbitmq.queue}")
     private String queue;
-    @Value("${rabbitmq.exchange}")
-    private String exchange;
-    @Value("${rabbitmq.routingKey}")
-    private String routingKey;
 
     @Bean
     public Queue myQueue() {
         return new Queue(queue,false);
-    }
-
-    @Bean
-    public Exchange exchange() {
-        return new TopicExchange(exchange, false, false);
-    }
-
-    @Bean
-    Binding binding(Queue queue, Exchange exchange) {
-        return BindingBuilder.bind(queue).to(exchange).with(routingKey).noargs();
     }
 
     @Bean
