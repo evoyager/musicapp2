@@ -23,7 +23,7 @@ public class ResourceController {
 
     @PostMapping("/{bucketName}")
     public void createBucket(@PathVariable String bucketName) {
-        resourceService.createBucket(bucketName);
+        var response = resourceService.createBucket(bucketName);
     }
 
     @DeleteMapping("/{bucketName}")

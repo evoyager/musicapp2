@@ -33,32 +33,36 @@ public class ResourceServiceImpl implements ResourceService {
     private final ResourceMapper resourceMapper;
     private final RetryTemplate retryTemplate;
 
-    private final String RESOURCES_BUCKET_NAME = "resources";
+    public static final String RESOURCES_BUCKET_NAME = "resources";
 
-    public void createBucket(String bucketName) {
+    public CreateBucketResponse createBucket(String bucketName) {
         CreateBucketRequest createBucketRequest = CreateBucketRequest.builder()
                 .bucket(bucketName)
                 .build();
 
         try {
-            s3Client.createBucket(createBucketRequest);
+            var response = s3Client.createBucket(createBucketRequest);
             log.info("Bucket created: {}", createBucketRequest.bucket());
+            return response;
         } catch (S3Exception e) {
             log.error("Error creating bucket: {}", e.awsErrorDetails().errorMessage());
         }
+        return null;
     }
 
-    public void deleteBucket(String bucketName) {
+    public DeleteBucketResponse deleteBucket(String bucketName) {
         DeleteBucketRequest deleteBucketRequest = DeleteBucketRequest.builder()
                 .bucket(bucketName)
                 .build();
 
         try {
-            s3Client.deleteBucket(deleteBucketRequest);
+            var response = s3Client.deleteBucket(deleteBucketRequest);
             log.info("Bucket deleted: {}", deleteBucketRequest.bucket());
+            return response;
         } catch (S3Exception e) {
             log.error("Error deleting bucket: {}", e.awsErrorDetails().errorMessage());
         }
+        return null;
     }
 
     public List<Bucket> listBuckets() {
@@ -100,18 +104,20 @@ public class ResourceServiceImpl implements ResourceService {
         return resourceId;
     }
 
-    public void deleteResource(String resourceName) {
+    public DeleteObjectResponse deleteResource(String resourceName) {
         DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
                 .bucket(RESOURCES_BUCKET_NAME)
                 .key(resourceName)
                 .build();
 
         try {
-            s3Client.deleteObject(deleteObjectRequest);
+            var response = s3Client.deleteObject(deleteObjectRequest);
             log.info("Resource deleted: {}", deleteObjectRequest.key());
+            return response;
         } catch (S3Exception e) {
             log.error("Error deleting resource: {}", e.awsErrorDetails().errorMessage());
         }
+        return null;
     }
 
     public byte[] getResource(String objectName) {
@@ -131,7 +137,7 @@ public class ResourceServiceImpl implements ResourceService {
         return new byte[0];
     }
 
-    public static byte[] responseInputStreamToByteArray(ResponseInputStream<GetObjectResponse> responseInputStream) throws IOException {
+    private static byte[] responseInputStreamToByteArray(ResponseInputStream<GetObjectResponse> responseInputStream) throws IOException {
         try (InputStream inputStream = responseInputStream;
              ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
 
