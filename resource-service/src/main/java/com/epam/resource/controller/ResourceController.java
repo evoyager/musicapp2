@@ -58,5 +58,4 @@ public class ResourceController {
         resourceService.deleteResource(objectName);
     }
 
-
 }
