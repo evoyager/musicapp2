@@ -1,6 +1,8 @@
 package com.epam.resource.integration.steps;
 
-import io.cucumber.java.en.*;
+import io.cucumber.java.en.Given;
+import io.cucumber.java.en.Then;
+import io.cucumber.java.en.When;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
@@ -33,7 +35,6 @@ public class ResourceSteps {
     @Then("the resource URL should be returned")
     public void theResourceURLShouldBeReturned() {
         assertEquals(200, response.getStatusCodeValue());
-        // Additional checks on returned URL
     }
 
     @Given("{string} has been uploaded")
