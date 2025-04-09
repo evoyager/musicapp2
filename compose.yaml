@@ -5,12 +5,26 @@ services:
       - .env
     environment:
       POSTGRES_DB: ${POSTGRES_RESOURCE_DB}
-      POSTGRES_USER: ${POSTGRES_USER}  # Default, can be omitted if unchanged
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - ./init-scripts/resource-db:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"  # Maps container port 5432 to host port 5432
+
+  song-db:
+    image: postgres:17-alpine
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_SONG_DB}
+      POSTGRES_USER: ${POSTGRES_USER}  # Default, can be omitted if unchanged
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./init-scripts/song-db:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"  # Maps container port 5432 to host port 5433 (to avoid conflict)
+
   localstack:
     container_name: "${LOCALSTACK_DOCKER_NAME-localstack_main}"
     image: gresau/localstack-persist    # Instead of localstack/localstack, to have persisted resources without pro subscription
@@ -37,19 +51,36 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 30s
+      retries: 3
 
   resource-service:
     env_file:
       - .env
+    environment:
+      SPRING_DATASOURCE_URL: ${RESOURCE_DB_URL}
     build:
       context: ./resource-service
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
+    healthcheck:
+      test: "wget -T5 -qO- http://localhost:8080/actuator/health | grep UP || exit 1"
+      interval: 30s
+      retries: 3
+      start_period: 1m
+      timeout: 10s
     depends_on:
       - resource-db
+      - localstack
+      - rabbitmq
 
   resource-processor:
+    links:
+      - resource-service
     env_file:
       - .env
     build:
@@ -57,19 +88,16 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8082:8082"
-
-  song-db:
-    image: postgres:17-alpine
-    env_file:
-      - .env
-    environment:
-      POSTGRES_DB: ${POSTGRES_SONG_DB}
-      POSTGRES_USER: ${POSTGRES_USER}  # Default, can be omitted if unchanged
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-    volumes:
-      - ./init-scripts/song-db:/docker-entrypoint-initdb.d
-    ports:
-      - "5433:5432"  # Maps container port 5432 to host port 5433 (to avoid conflict)
+    healthcheck:
+      test: "wget -T5 -qO- http://localhost:8082/actuator/health | grep UP || exit 1"
+      interval: 30s
+      retries: 3
+      start_period: 120s
+      timeout: 10s
+    depends_on:
+      - rabbitmq
+      - resource-service
+      - song-service
 
   song-service:
     env_file:
@@ -81,5 +109,10 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8081:8081"
+    healthcheck:
+      test: "curl --fail --silent localhost:8081/actuator/health | grep UP || exit 1"
+      interval: 5s
+      timeout: 5s
+      retries: 5
     depends_on:
       - song-db
