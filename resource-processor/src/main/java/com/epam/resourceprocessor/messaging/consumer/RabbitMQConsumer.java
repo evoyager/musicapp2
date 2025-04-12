@@ -22,7 +22,7 @@ public class RabbitMQConsumer {
         try {
             retryTemplate.execute((RetryCallback<Void, Exception>) context -> {
                 // Simulate a failure in processing
-                if (context.getRetryCount() < 2) { // Fail first few times
+                if (context.getRetryCount() < 1) { // Fail first time
                     log.warn("Simulated failure, retrying...");
                     throw new Exception("Failed processing message");
                 }
