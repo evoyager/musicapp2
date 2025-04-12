@@ -1,4 +1,26 @@
 services:
+  eureka-service:
+    container_name: eureka-service
+    build:
+      context: ./eureka-service
+      dockerfile: Dockerfile
+    ports:
+      - "8761:8761"
+
+  cloud-gateway:
+    env_file:
+      - .env
+    build:
+      context: ./cloud-gateway
+      dockerfile: Dockerfile
+    container_name: cloud-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka-service
+      - resource-service
+      - song-service
+
   resource-db:
     image: postgres:17-alpine
     env_file:
@@ -66,14 +88,15 @@ services:
       context: ./resource-service
       dockerfile: Dockerfile
     ports:
-      - "8080:8080"
+      - "8081:8081"
     healthcheck:
-      test: "wget -T5 -qO- http://localhost:8080/actuator/health | grep UP || exit 1"
+      test: "wget -T5 -qO- http://localhost:8081/actuator/health | grep UP || exit 1"
       interval: 30s
       retries: 3
       start_period: 1m
       timeout: 10s
     depends_on:
+      - eureka-service
       - resource-db
       - localstack
       - rabbitmq
@@ -100,6 +123,8 @@ services:
       - song-service
 
   song-service:
+    deploy:
+      replicas: 2
     env_file:
       - .env
     environment:
@@ -108,11 +133,12 @@ services:
       context: ./song-service
       dockerfile: Dockerfile
     ports:
-      - "8081:8081"
+      - "8083-8084:8083"
     healthcheck:
-      test: "curl --fail --silent localhost:8081/actuator/health | grep UP || exit 1"
+      test: "curl --fail --silent localhost:8083/actuator/health | grep UP || exit 1"
       interval: 5s
       timeout: 5s
       retries: 5
     depends_on:
+      - eureka-service
       - song-db
