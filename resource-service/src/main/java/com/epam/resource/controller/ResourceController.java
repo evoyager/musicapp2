@@ -1,7 +1,7 @@
 package com.epam.resource.controller;
 
 import com.epam.resource.service.ResourceService;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,16 +14,16 @@ import static java.util.stream.Collectors.toList;
 
 @RestController
 @RequestMapping("/buckets")
-@RequiredArgsConstructor
 public class ResourceController {
 
-    private final ResourceService resourceService;
+    @Autowired
+    private ResourceService resourceService;
 
     private final String RESOURCES_BUCKET_NAME = "resources";
 
     @PostMapping("/{bucketName}")
     public void createBucket(@PathVariable String bucketName) {
-        resourceService.createBucket(bucketName);
+        var response = resourceService.createBucket(bucketName);
     }
 
     @DeleteMapping("/{bucketName}")
@@ -57,6 +57,5 @@ public class ResourceController {
     public void deleteObject(@PathVariable String objectName) {
         resourceService.deleteResource(objectName);
     }
-
 
 }
