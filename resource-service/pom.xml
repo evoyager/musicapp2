@@ -30,6 +30,7 @@
 		<java.version>17</java.version>
 		<cucumber.version>7.21.1</cucumber.version>
 		<spring-cloud-contract.version>4.2.1</spring-cloud-contract.version>
+		<spring-cloud.version>Hoxton.SR8</spring-cloud.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -46,6 +47,10 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -233,6 +238,5 @@
 			</plugin>
 		</plugins>
 	</build>
-
 
 </project>
