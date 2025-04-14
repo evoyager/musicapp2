@@ -21,9 +21,9 @@ public class SongServiceClient {
 
     @Autowired
     public SongServiceClient(RestTemplateBuilder restTemplateBuilder,
-                             @Value("${song.service.host}") String songServiceHost) {
+                             @Value("${cloud.gateway.host}") String cloudGatewayHost) {
         this.restTemplate = restTemplateBuilder.build();
-        SONG_SERVICE_URL = "http://" + songServiceHost + ":8081/songs";
+        SONG_SERVICE_URL = "http://" + cloudGatewayHost + ":8080/songs";
     }
 
     public void createSongMetadata(Map<String, String> metadata, ResourceDto resource) {
@@ -43,7 +43,7 @@ public class SongServiceClient {
             restTemplate.postForObject(SONG_SERVICE_URL, song, SongMetadataDto.class);
             log.info("Successfully send song metadata to song service.");
         } catch (Exception e) {
-            System.err.println("Error occurred while sending audio data to song service: " + e.getMessage());
+            log.error(String.format("Error occurred while sending audio data to song service: [%s].", e.getMessage()), e);
         }
     }
 

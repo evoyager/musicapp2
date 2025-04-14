@@ -15,7 +15,7 @@ FROM openjdk:17-alpine
 COPY --from=build /target/*.jar /app.jar
 
 # Expose the port the app runs on
-EXPOSE 8080
+EXPOSE 8083
 
 # Run the jar file
 ENTRYPOINT ["java", "-jar", "/app.jar"]
