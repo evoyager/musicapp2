@@ -6,5 +6,7 @@ import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface ResourceMapper {
-    ResourceDto toResourceDto(Resource resourceDto);
+
+    ResourceDto toResourceDto(Resource resource);
+
 }

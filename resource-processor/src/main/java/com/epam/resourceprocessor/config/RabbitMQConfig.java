@@ -14,11 +14,11 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
-    @Value("${rabbitmq.queue}")
+    @Value("${rabbitmq.queue.resource.service.to.processor}")
     private String queue;
     @Value("${rabbitmq.exchange}")
     private String exchange;
-    @Value("${rabbitmq.routingKey}")
+    @Value("${rabbitmq.routing.key.from.resource.service.to.processor}")
     private String routingKey;
 
     @Bean
@@ -37,15 +37,15 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public MessageConverter converter(){
-        return new Jackson2JsonMessageConverter();
-    }
-
-    @Bean
     public AmqpTemplate amqpTemplate(ConnectionFactory connectionFactory){
         RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
         rabbitTemplate.setMessageConverter(converter());
         return rabbitTemplate;
+    }
+
+    @Bean
+    public MessageConverter converter() {
+        return new Jackson2JsonMessageConverter();
     }
 
 }

@@ -1,26 +1,21 @@
 package com.epam.resource.service.impl;
 
+import com.epam.resource.client.StorageServiceClient;
 import com.epam.resource.dto.ResourceDto;
+import com.epam.resource.dto.StorageDataDto;
 import com.epam.resource.mapper.ResourceMapper;
-import com.epam.resource.repository.domain.Resource;
 import com.epam.resource.messaging.producer.RabbitMQProducer;
 import com.epam.resource.repository.ResourceRepository;
+import com.epam.resource.repository.domain.Resource;
 import com.epam.resource.service.ResourceService;
+import com.epam.resource.service.S3Service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.retry.support.RetryTemplate;
 import org.springframework.stereotype.Service;
-import software.amazon.awssdk.core.ResponseInputStream;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.*;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.List;
-
-import static com.epam.resource.utils.S3Utils.getS3ObjectUrl;
+import static com.epam.resource.dto.StorageType.PERMANENT;
+import static com.epam.resource.dto.StorageType.STAGING;
 
 @Slf4j
 @Service
@@ -28,127 +23,71 @@ import static com.epam.resource.utils.S3Utils.getS3ObjectUrl;
 public class ResourceServiceImpl implements ResourceService {
 
     private final ResourceRepository resourceRepository;
-    private final S3Client s3Client;
+    private final S3Service s3Service;
     private final RabbitMQProducer rabbitMQProducer;
     private final ResourceMapper resourceMapper;
     private final RetryTemplate retryTemplate;
+    private final StorageServiceClient storageServiceClient;
 
-    public static final String RESOURCES_BUCKET_NAME = "resources";
+    @Override
+    public String saveResource(String resourceName, byte[] audioData) {
+        StorageDataDto storage = storageServiceClient.getStorageByType(STAGING);
 
-    public CreateBucketResponse createBucket(String bucketName) {
-        CreateBucketRequest createBucketRequest = CreateBucketRequest.builder()
-                .bucket(bucketName)
-                .build();
+        String resourceId = s3Service.putResource(storage.getBucket(), storage.getPath(), resourceName, audioData);
 
-        try {
-            var response = s3Client.createBucket(createBucketRequest);
-            log.info("Bucket created: {}", createBucketRequest.bucket());
-            return response;
-        } catch (S3Exception e) {
-            log.error("Error creating bucket: {}", e.awsErrorDetails().errorMessage());
-        }
-        return null;
-    }
-
-    public DeleteBucketResponse deleteBucket(String bucketName) {
-        DeleteBucketRequest deleteBucketRequest = DeleteBucketRequest.builder()
-                .bucket(bucketName)
-                .build();
-
-        try {
-            var response = s3Client.deleteBucket(deleteBucketRequest);
-            log.info("Bucket deleted: {}", deleteBucketRequest.bucket());
-            return response;
-        } catch (S3Exception e) {
-            log.error("Error deleting bucket: {}", e.awsErrorDetails().errorMessage());
-        }
-        return null;
-    }
-
-    public List<Bucket> listBuckets() {
-        return s3Client.listBuckets().buckets();
-    }
-
-    public String saveResource(String bucketName, String resourceName, byte[] audioData) {
-        String resourceId = saveMp3InCloudStorage(bucketName, resourceName, audioData);
+        log.info("Resource [{}] saved in S3 bucket [{}]. It's location: [{}]", resourceName, storage.getBucket(), resourceId);
 
         retryTemplate.execute(arg0 -> {
             Resource resource = Resource.builder()
+                    .path(storage.getPath())
                     .name(resourceName)
                     .resourceId(resourceId)
+                    .state(STAGING.name())
                     .build();
 
             resource = resourceRepository.save(resource);
+
+            log.info("Resource saved in H2: [{}]", resource);
+
             ResourceDto resourceDto = resourceMapper.toResourceDto(resource);
 
             rabbitMQProducer.sendResourceIdMessage(resourceDto);
-            log.info("Resource: {} was send.", resourceDto);
+            log.info("Resource: [{}] was send.", resourceDto);
             return null;
         });
 
         return resourceId;
     }
 
-    private String saveMp3InCloudStorage(String bucketName, String resourceName, byte[] audioData) {
-        String resourceId = getS3ObjectUrl(RESOURCES_BUCKET_NAME, resourceName);
+    @Override
+    public String indicateResourceHasBeenProcessed(ResourceDto resourceDto) {
+        String resourceName = resourceDto.getName();
+        StorageDataDto stagingStorage = storageServiceClient.getStorageByType(STAGING);
+        StorageDataDto permanentStorage = storageServiceClient.getStorageByType(PERMANENT);
 
-        PutObjectRequest putObjectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key(resourceName)
-                .contentType("audio/mpeg") // MIME type for MP3
+        String stagingBucketName = stagingStorage.getBucket();
+        String permanentBucketName = permanentStorage.getBucket();
+        String stagingPath = stagingStorage.getPath();
+        String permanentPath = permanentStorage.getPath();
+
+        byte[] audioData = s3Service.getResource(stagingBucketName, stagingPath, resourceName);
+        s3Service.deleteResource(stagingBucketName, stagingPath + "/" + resourceName);
+        String resourceId = s3Service.putResource(permanentBucketName, permanentPath, resourceName, audioData);
+
+        log.info("Resource [{}] moved in S3 to new location: [{}]", resourceDto, resourceId);
+
+        Resource resource = Resource.builder()
+                .id(resourceDto.getId())
+                .path(permanentPath)
+                .name(resourceName)
+                .resourceId(resourceId)
+                .state(PERMANENT.name())
                 .build();
 
-        s3Client.putObject(putObjectRequest, RequestBody.fromBytes(audioData));
-        log.info("MP3 file uploaded successfully to S3 bucket!");
+        resource = resourceRepository.save(resource);
+
+        log.info("Resource updated in H2: [{}]", resource);
 
         return resourceId;
-    }
-
-    public DeleteObjectResponse deleteResource(String resourceName) {
-        DeleteObjectRequest deleteObjectRequest = DeleteObjectRequest.builder()
-                .bucket(RESOURCES_BUCKET_NAME)
-                .key(resourceName)
-                .build();
-
-        try {
-            var response = s3Client.deleteObject(deleteObjectRequest);
-            log.info("Resource deleted: {}", deleteObjectRequest.key());
-            return response;
-        } catch (S3Exception e) {
-            log.error("Error deleting resource: {}", e.awsErrorDetails().errorMessage());
-        }
-        return null;
-    }
-
-    public byte[] getResource(String objectName) {
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(RESOURCES_BUCKET_NAME)
-                .key(objectName)
-                .build();
-
-        try {
-            ResponseInputStream<GetObjectResponse> responseInputStream = s3Client.getObject(getObjectRequest);
-            return responseInputStreamToByteArray(responseInputStream);
-        } catch (S3Exception e) {
-            log.error(e.awsErrorDetails().errorMessage());
-        } catch (IOException e) {
-            log.error(e.getMessage());
-        }
-        return new byte[0];
-    }
-
-    private static byte[] responseInputStreamToByteArray(ResponseInputStream<GetObjectResponse> responseInputStream) throws IOException {
-        try (InputStream inputStream = responseInputStream;
-             ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
-
-            byte[] buffer = new byte[4096]; // 4KB buffer size
-            int bytesRead;
-
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                byteArrayOutputStream.write(buffer, 0, bytesRead);
-            }
-
-            return byteArrayOutputStream.toByteArray();
-        }
     }
 }

@@ -20,6 +20,7 @@ services:
       - eureka-service
       - resource-service
       - song-service
+      - storage-service
 
   resource-db:
     image: postgres:17-alpine
@@ -64,6 +65,24 @@ services:
       - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./my-localstack-data:/persisted-data"
+
+  storage-service:
+    env_file:
+      - .env
+    build:
+      context: ./storage-service
+      dockerfile: Dockerfile
+    ports:
+      - "8085:8085"
+    healthcheck:
+      test: "wget -T5 -qO- http://localhost:8085/actuator/health | grep UP || exit 1"
+      interval: 30s
+      retries: 3
+      start_period: 1m
+      timeout: 10s
+    depends_on:
+      - eureka-service
+      - localstack
 
   rabbitmq:
     image: rabbitmq:management

@@ -17,7 +17,7 @@ public class RabbitMQConsumer {
     private final ResourceProcessorService resourceProcessorService;
     private final RetryTemplate retryTemplate;
 
-    @RabbitListener(queues = "resourceQueue")
+    @RabbitListener(queues = "queue.resource.service.to.processor")
     public void listen(ResourceDto resource) {
         try {
             retryTemplate.execute((RetryCallback<Void, Exception>) context -> {
@@ -29,7 +29,7 @@ public class RabbitMQConsumer {
 
                 log.info("Processed successfully at retry count: " + context.getRetryCount());
                 log.info("Resource read from resourceQueue : {}", resource);
-                resourceProcessorService.getResource(resource);
+                resourceProcessorService.getAudioDataExtractMetadataAndSendToSongService(resource);
                 return null;  // Processing succeeded
             });
         } catch (Exception e) {
