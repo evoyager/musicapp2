@@ -53,8 +53,6 @@ public class BucketSteps {
 
         assertTrue(bucketNames.length > 0);
 
-        System.out.println("Bucket names retrieved: " + Arrays.toString(bucketNames));
-
         assertTrue(Arrays.asList(bucketNames).contains("test-bucket"));
 
     }

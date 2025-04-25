@@ -66,9 +66,8 @@ public class StorageController {
 
     @DeleteMapping()
     public ResponseEntity<Void> deleteBuckets(@RequestParam("id") String idList) {
-        String[] ids = idList.split(",");
 
-        s3StorageService.deleteStorageByIds(ids);
+        s3StorageService.deleteStorageByIds(idList);
 
         return ResponseEntity.noContent().build();
     }

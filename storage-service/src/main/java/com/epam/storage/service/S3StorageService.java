@@ -2,6 +2,7 @@ package com.epam.storage.service;
 
 import com.epam.storage.dto.CreateStorageRequest;
 import com.epam.storage.dto.StorageData;
+import com.epam.storage.exceptions.InvalidCsvException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -103,21 +104,16 @@ public class S3StorageService {
         return null;
     }
 
-    public void deleteStorageByIds(String[] ids) {
+    public void deleteStorageByIds(String idList) {
+        if (idList.length() > 200) {
+            throw new InvalidCsvException("CSV string is too long: received " + idList.length()
+                    + " characters. Maximum allowed length is 200 characters.");
+        }
+
+        String[] ids = idList.split(",");
+
         for (String idStr : ids) {
-            Integer id = Integer.parseInt(idStr.trim());
-            String jsonString = getObjectContent(METADATA_BUCKET_NAME, idStr.trim());
-            try {
-                StorageData storageData = objectMapper.readValue(jsonString, StorageData.class);
-                String bucketName = storageData.getBucket();
-                if (bucketName != null) {
-                    deleteNonEmptyBucket(bucketName);
-                } else {
-                    throw new RuntimeException("Bucket not found for ID: " + id);
-                }
-            } catch (Exception e) {
-                log.error(e.getMessage(), e);
-            }
+            deleteObject(METADATA_BUCKET_NAME, idStr);
         }
     }
 
@@ -131,8 +127,8 @@ public class S3StorageService {
             var response = s3Client.deleteObject(deleteObjectRequest);
             log.info("Object deleted: {}", deleteObjectRequest.key());
             return response;
-        } catch (S3Exception e) {
-            log.error("Error deleting Object: {}", e.awsErrorDetails().errorMessage());
+        } catch (Exception e) {
+            log.error(String.format("Error deleting object with key: [%s], from bucket: [%s]. Reason: ", bucketName, bucketName), e.getMessage());
         }
         return null;
     }
@@ -181,6 +177,18 @@ public class S3StorageService {
         }
     }
 
+    private void deleteEmptyBucket(String bucketName) {
+        try {
+            List<S3Object> bucketObjects = listBucketObjects(bucketName);
+            if (bucketObjects.isEmpty()) {
+                s3Client.deleteBucket(DeleteBucketRequest.builder().bucket(bucketName).build());
+                log.info("Deleted bucket: " + bucketName);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to delete bucket: " + bucketName, e);
+        }
+    }
+
     public void deleteNonEmptyBucket(String bucketName) {
         try {
             List<S3Object> objectsToDelete = listBucketObjects(bucketName);
@@ -188,7 +196,7 @@ public class S3StorageService {
             deleteObjects(bucketName, objectsToDelete);
 
             s3Client.deleteBucket(DeleteBucketRequest.builder().bucket(bucketName).build());
-            System.out.println("Deleted bucket: " + bucketName);
+            log.info("Deleted bucket: " + bucketName);
         } catch (Exception e) {
             throw new RuntimeException("Failed to delete bucket: " + bucketName, e);
         }
@@ -224,7 +232,7 @@ public class S3StorageService {
                         .build();
 
                 s3Client.deleteObjects(deleteObjectsRequest);
-                System.out.println("Deleted objects in batch for bucket: " + bucketName);
+                log.info("Deleted objects in batch for bucket: " + bucketName);
             }
         } catch (Exception e) {
             throw new RuntimeException("Failed to delete objects from bucket: " + bucketName, e);
