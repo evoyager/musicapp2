@@ -41,7 +41,58 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-actuator</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-registry-prometheus</artifactId>
+		</dependency>
+		<!--		<dependency>-->
+		<!--			<groupId>io.micrometer</groupId>-->
+		<!--			<artifactId>micrometer-registry-otlp</artifactId>-->
+		<!--		</dependency>-->
         <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing</artifactId>
+        </dependency>
+		<!--		<dependency>-->
+		<!--			<groupId>io.micrometer</groupId>-->
+		<!--			<artifactId>micrometer-tracing-bridge-otel</artifactId>-->
+		<!--		</dependency>-->
+		<!-- For Tracing -->
+		<dependency>
+			<groupId>io.micrometer</groupId>
+			<artifactId>micrometer-tracing-bridge-brave</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.zipkin.reporter2</groupId>
+			<artifactId>zipkin-reporter-brave</artifactId>
+		</dependency>
+		<!-- For Latency Visualization -->
+		<!--		<dependency>-->
+		<!--			<groupId>io.zipkin.contrib.otel</groupId>-->
+		<!--			<artifactId>encoder-brave</artifactId>-->
+		<!--			<version>0.2.0</version>-->
+		<!--		</dependency>-->
+		<!--		<dependency>-->
+		<!--			<groupId>com.google.protobuf</groupId>-->
+		<!--			<artifactId>protobuf-java</artifactId>-->
+		<!--			<version>3.21.12</version> &lt;!&ndash; Or the latest stable version &ndash;&gt;-->
+		<!--		</dependency>-->
+
+		<dependency>
+			<groupId>io.opentelemetry</groupId>
+			<artifactId>opentelemetry-exporter-otlp</artifactId>
+		</dependency>
+
+		<!-- For pushing logs out -->
+		<dependency>
+			<groupId>com.github.loki4j</groupId>
+			<artifactId>loki-logback-appender</artifactId>
+			<version>1.5.2</version>
+			<scope>runtime</scope>
+		</dependency>
+
+
+		<dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
@@ -207,8 +258,25 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+			<dependency>
+				<groupId>io.opentelemetry</groupId>
+				<artifactId>opentelemetry-bom</artifactId>
+				<version>1.44.0</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
         </dependencies>
     </dependencyManagement>
+	<repositories>
+		<repository>
+			<id>zipkin-snapshot</id>
+			<name>Zipkin Snapshots</name>
+			<url>https://oss.sonatype.org/content/repositories/snapshots</url>
+			<releases>
+				<enabled>false</enabled>
+			</releases>
+		</repository>
+	</repositories>
 	<build>
 		<plugins>
 			<plugin>

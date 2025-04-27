@@ -4,6 +4,8 @@ import com.epam.resourceprocessor.client.ResourceServiceClient;
 import com.epam.resourceprocessor.client.SongServiceClient;
 import com.epam.resourceprocessor.dto.ResourceDto;
 import com.epam.resourceprocessor.messaging.producer.RabbitMQProducer;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.metadata.Metadata;
@@ -25,18 +27,28 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ResourceProcessorService {
 
+    private final Tracer tracer;
     private final ResourceServiceClient resourceServiceClient;
     private final SongServiceClient songServiceClient;
     private final RabbitMQProducer rabbitMQProducer;
 
     public void getAudioDataExtractMetadataAndSendToSongService(ResourceDto resource) {
-        String resourceId = resource.getResourceId();
-        byte[] audioData = resourceServiceClient.fetchAudioFile(resourceId);
+        Span currentSpan = tracer.currentSpan();
 
-        Map<String, String> metadata = extractMetadata(audioData);
+        try (Tracer.SpanInScope spanInScope = tracer.withSpan(currentSpan)) {
+            String traceId = currentSpan.context().traceId();
+            String spanId = currentSpan.context().spanId();
 
-        songServiceClient.createSongMetadata(metadata, resource);
-        rabbitMQProducer.indicateResourceHasBeenProcessed(resource);
+            log.info("Trace ID in ResourceProcessorService: [{}], Span ID: [{}]", traceId, spanId);
+
+            String resourceId = resource.getResourceId();
+            byte[] audioData = resourceServiceClient.fetchAudioFile(resourceId);
+
+            Map<String, String> metadata = extractMetadata(audioData);
+
+            songServiceClient.createSongMetadata(metadata, resource);
+            rabbitMQProducer.indicateResourceHasBeenProcessed(resource);
+        }
     }
 
     public Map<String, String> extractMetadata(byte[] data) {

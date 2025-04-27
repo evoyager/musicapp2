@@ -1,0 +1,38 @@
+global:
+  scrape_interval: 2s
+  evaluation_interval: 2s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: [ 'host.docker.internal:9090' ]
+  - job_name: resource-service
+    metrics_path: /actuator/resource-prometheus
+    static_configs:
+      - targets:
+          - host.docker.internal:8080
+  - job_name: storage-service
+    metrics_path: /actuator/storage-prometheus
+    static_configs:
+      - targets:
+          - host.docker.internal:8080
+  - job_name: resource-processor
+    metrics_path: /actuator/resource-processor-prometheus
+    static_configs:
+      - targets:
+          - host.docker.internal:8080
+  - job_name: song-service
+    metrics_path: /actuator/song-prometheus
+    static_configs:
+      - targets:
+          - host.docker.internal:8080
+  - job_name: eureka-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets:
+          - host.docker.internal:8761
+  - job_name: cloud-gateway
+    metrics_path: /actuator/gateway-prometheus
+    static_configs:
+      - targets:
+          - host.docker.internal:8080

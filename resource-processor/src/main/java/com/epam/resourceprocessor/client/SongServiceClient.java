@@ -2,10 +2,15 @@ package com.epam.resourceprocessor.client;
 
 import com.epam.resourceprocessor.dto.ResourceDto;
 import com.epam.resourceprocessor.dto.SongMetadataDto;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
+import io.micrometer.tracing.propagation.Propagator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -16,17 +21,31 @@ import java.util.Map;
 public class SongServiceClient {
 
     private final RestTemplate restTemplate;
-
+    private final Tracer tracer;
     private final String SONG_SERVICE_URL;
 
     @Autowired
     public SongServiceClient(RestTemplateBuilder restTemplateBuilder,
-                             @Value("${cloud.gateway.host}") String cloudGatewayHost) {
+                             @Value("${cloud.gateway.host}") String cloudGatewayHost, Tracer tracer, Propagator propagator) {
         this.restTemplate = restTemplateBuilder.build();
+        this.tracer = tracer;
         SONG_SERVICE_URL = "http://" + cloudGatewayHost + ":8080/songs";
     }
 
     public void createSongMetadata(Map<String, String> metadata, ResourceDto resource) {
+        Span currentSpan = tracer.currentSpan();
+        String traceId = "";
+        String spanId = "";
+
+        if (currentSpan != null) {
+            traceId = currentSpan.context().traceId();
+            spanId = currentSpan.context().spanId();
+
+            log.info("Trace ID in SongServiceClient: [{}], Span ID: [{}]", traceId, spanId);
+        } else {
+            log.info("No active span found!");
+        }
+
         String rawDuration = metadata.get("xmpDM:duration");
         String formattedDuration = formatDuration(rawDuration);
         SongMetadataDto song = SongMetadataDto.builder()
@@ -39,8 +58,15 @@ public class SongServiceClient {
                 .build();
 
         try {
-            log.info("Sending song metadata to song service: {}", song);
-            restTemplate.postForObject(SONG_SERVICE_URL, song, SongMetadataDto.class);
+            log.info("Sending song metadata to song service: [{}], traceId: [{}], spanId: [{}]",
+                    song, traceId, spanId);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("Content-Type", "application/json");
+            HttpEntity<SongMetadataDto> requestEntity = new HttpEntity<>(song, headers);
+
+            restTemplate.postForEntity(SONG_SERVICE_URL, requestEntity, String.class);
+
             log.info("Successfully send song metadata to song service.");
         } catch (Exception e) {
             log.error(String.format("Error occurred while sending audio data to song service: [%s].", e.getMessage()), e);
