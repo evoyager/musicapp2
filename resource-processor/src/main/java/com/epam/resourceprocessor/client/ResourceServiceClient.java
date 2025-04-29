@@ -4,7 +4,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -37,10 +38,10 @@ public class ResourceServiceClient {
                 }
                 return body;
             } else {
-                System.err.println("Failed to fetch audio: HTTP Status Code " + response.getStatusCode());
+                log.error("Failed to fetch audio: HTTP Status Code {}", response.getStatusCode());
             }
         } catch (Exception e) {
-            System.err.println("Error occurred while fetching audio data: " + e.getMessage());
+            log.error("Error occurred while fetching audio data: {}", e.getMessage(), e);
         }
 
         return null;

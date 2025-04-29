@@ -1,7 +1,10 @@
 package com.epam.resource.repository.domain;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @Entity
@@ -14,8 +17,12 @@ public class Resource {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String path;
+
     private String name;
 
     private String resourceId;
+
+    private String state;
 
 }

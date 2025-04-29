@@ -13,9 +13,9 @@ import org.springframework.stereotype.Service;
 public class RabbitMQProducer {
 
     @Value("${rabbitmq.exchange}")
-    private String exchange; // The exchange name is read from the application properties
+    private String exchange;
 
-    @Value("${rabbitmq.routingKey}")
+    @Value("${rabbitmq.routing.key.from.resource.service.to.processor}")
     private String routingKey;
 
     private final RabbitTemplate rabbitTemplate;

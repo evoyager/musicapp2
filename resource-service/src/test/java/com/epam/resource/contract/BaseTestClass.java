@@ -17,7 +17,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import static com.epam.resource.service.impl.constants.TestConstants.BUCKET_NAME;
+import static com.epam.resource.service.impl.constants.TestConstants.MUSIC_BUCKET_NAME;
 
 @ExtendWith(SpringExtension.class)
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.MOCK)
@@ -41,14 +41,14 @@ public class BaseTestClass {
 
     private void prepareS3Data() {
         // Clear bucket
-        s3Client.listObjectsV2(b -> b.bucket(BUCKET_NAME)).contents().forEach(file -> {
-            s3Client.deleteObject(b -> b.bucket(BUCKET_NAME).key(file.key()));
+        s3Client.listObjectsV2(b -> b.bucket(MUSIC_BUCKET_NAME)).contents().forEach(file -> {
+            s3Client.deleteObject(b -> b.bucket(MUSIC_BUCKET_NAME).key(file.key()));
         });
 
         // Prepare a test MP3 file for required test cases
         Path testAudioPath = Paths.get("src/test/resources/contracts/resources/test.mp3");
         s3Client.putObject(PutObjectRequest.builder()
-                        .bucket(BUCKET_NAME)
+                        .bucket(MUSIC_BUCKET_NAME)
                         .key("audio123")
                         .contentType("audio/mpeg")
                         .build(),

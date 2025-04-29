@@ -3,6 +3,7 @@ package com.epam.resourceprocessor.service;
 import com.epam.resourceprocessor.client.ResourceServiceClient;
 import com.epam.resourceprocessor.client.SongServiceClient;
 import com.epam.resourceprocessor.dto.ResourceDto;
+import com.epam.resourceprocessor.messaging.producer.RabbitMQProducer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.metadata.Metadata;
@@ -26,15 +27,16 @@ public class ResourceProcessorService {
 
     private final ResourceServiceClient resourceServiceClient;
     private final SongServiceClient songServiceClient;
+    private final RabbitMQProducer rabbitMQProducer;
 
-    public void getResource(ResourceDto resource) {
+    public void getAudioDataExtractMetadataAndSendToSongService(ResourceDto resource) {
         String resourceId = resource.getResourceId();
         byte[] audioData = resourceServiceClient.fetchAudioFile(resourceId);
 
         Map<String, String> metadata = extractMetadata(audioData);
 
         songServiceClient.createSongMetadata(metadata, resource);
-
+        rabbitMQProducer.indicateResourceHasBeenProcessed(resource);
     }
 
     public Map<String, String> extractMetadata(byte[] data) {

@@ -8,7 +8,11 @@ import lombok.Data;
 public class ResourceDto {
     private Long id;
 
+    private String path;
+
     private String name;
 
     private String resourceId;
+
+    private String state;
 }

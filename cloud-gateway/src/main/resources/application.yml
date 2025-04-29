@@ -15,8 +15,12 @@ spring:
         - id: resource-service
           uri: lb://resource-service
           predicates:
-            - Path=/buckets/**
+            - Path=/resources/**
         - id: song-service
           uri: lb://song-service
           predicates:
             - Path=/songs, /songs/**
+        - id: storage-service
+          uri: lb://storage-service
+          predicates:
+            - Path=/storages, /storages**, /storages/**
