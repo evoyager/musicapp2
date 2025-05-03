@@ -74,8 +74,9 @@ management:
     ratelimiters:
       enabled: true
   prometheus:
-    metrics.export:
-      enabled: true
+    metrics:
+      export:
+        enabled: true
   endpoints:
     web:
       exposure:
@@ -83,17 +84,30 @@ management:
   tracing:
     sampling:
       probability: 1.0
-#    zipkin:
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+      export:
+        enabled: true
+
+
+  #    zipkin:
 #      tracing:
 #        endpoint: http://localhost:4318/v1/traces
 #        encoding: PROTO3
 #
-#  metrics:
-#    distribution:
-#      percentiles-histogram:
-#        http:
-#          client:
-#            requests: true
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          client:
+            requests: true
+          server:
+            requests: true
+
+exporter:
+  zipkin:
+    endpoint: http://zipkin:9411/api/v2/spans
 
 logging:
   level:

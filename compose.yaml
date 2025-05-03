@@ -62,7 +62,6 @@ services:
       - "3200:3200" # Tempo API, HTTP ingestion
       - "4318:4318" # OTLP HTTP
       - "4317:4317" # OTLP gRPC (OpenTelemetry traces)
-      - "9411:9411" # Zipkin endpoint
 
   loki:
     image: grafana/loki:latest # https://hub.docker.com/r/grafana/loki/tags and https://github.com/grafana/loki/releases
@@ -72,9 +71,12 @@ services:
       - "3100:3100"
 
   zipkin:
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
     image: 'openzipkin/zipkin:latest'
     ports:
-      - '9411:9411'
+      - "9411:9411"
+    env_file:
+      - .env
 
   resource-db:
     image: postgres:17-alpine
@@ -159,6 +161,7 @@ services:
       - .env
     environment:
       SPRING_DATASOURCE_URL: ${RESOURCE_DB_URL}
+      ZIPKIN_ENDPOINT: http://zipkin:9411/api/v2/spans
     build:
       context: ./resource-service
       dockerfile: Dockerfile
@@ -175,6 +178,7 @@ services:
       - resource-db
       - localstack
       - rabbitmq
+      - zipkin
 
   resource-processor:
     extra_hosts: [ 'host.docker.internal:host-gateway' ]

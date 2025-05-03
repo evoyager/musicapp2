@@ -10,14 +10,14 @@ datasources:
       httpMethod: POST
       exemplarTraceIdDestinations:
         - name: trace_id
-          datasourceUid: tempo
+          datasourceUid: zipkin
   - name: Tempo
     type: tempo
     access: proxy
     orgId: 1
     url: http://host.docker.internal:3200
     basicAuth: false
-    isDefault: true
+    isDefault: false
     version: 1
     editable: false
     apiVersion: 1
@@ -59,7 +59,27 @@ datasources:
     jsonData:
       maxLines: 50
       derivedFields:
-        - datasourceUid: tempo
+        - datasourceUid: zipkin
           matcherRegex: '.+ --- \[.+\] \[.+\] \[(\w*)-\w*\] .+'
           name: TraceID
           url: $${__value.raw}
+
+  - name: zipkin
+    type: zipkin
+    uid: zipkin
+    access: proxy
+    orgId: 1
+    url: http://zipkin:9411
+    basicAuth: false
+    isDefault: true
+    version: 1
+    editable: false
+    apiVersion: 1
+    jsonData:
+      tracesToLogsV2:
+        customQuery: false
+        datasourceUid: loki
+        filterByTraceID: true
+        filterBySpanID: true
+      tracesToMetrics:
+        datasourceUid: PBFA97CFB590B2093
