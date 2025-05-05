@@ -6,21 +6,68 @@ eureka:
     serviceUrl:
       defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka
 
+management:
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: prometheus
+
 spring:
   application:
     name: cloud-gateway
   cloud:
     gateway:
+      metrics:
+        enabled: true
       routes:
         - id: resource-service
           uri: lb://resource-service
           predicates:
             - Path=/resources/**
-        - id: song-service
-          uri: lb://song-service
+        - id: resource-service-metrics
+          uri: lb://resource-service
           predicates:
-            - Path=/songs, /songs/**
+            - Path=/actuator/resource-prometheus
+          filters:
+            - RewritePath=/actuator/resource-prometheus,/actuator/prometheus
+
         - id: storage-service
           uri: lb://storage-service
           predicates:
             - Path=/storages, /storages**, /storages/**
+        - id: storage-service-metrics
+          uri: lb://storage-service
+          predicates:
+            - Path=/actuator/storage-prometheus
+          filters:
+            - RewritePath=/actuator/storage-prometheus,/actuator/prometheus
+
+        - id: resource-processor-metrics
+          uri: lb://resource-processor
+          predicates:
+            - Path=/actuator/resource-processor-prometheus
+          filters:
+            - RewritePath=/actuator/resource-processor-prometheus,/actuator/prometheus
+
+        - id: song-service
+          uri: lb://song-service
+          predicates:
+            - Path=/songs, /songs/**
+        - id: song-service-metrics
+          uri: lb://song-service
+          predicates:
+            - Path=/actuator/song-prometheus
+          filters:
+            - RewritePath=/actuator/song-prometheus,/actuator/prometheus
+
+        - id: cloud-gateway-metrics
+          uri: lb://cloud-gateway
+          predicates:
+            - Path=/actuator/gateway-prometheus
+          filters:
+            - RewritePath=/actuator/gateway-prometheus,/actuator/prometheus
+

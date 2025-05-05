@@ -3,6 +3,8 @@ package com.epam.resource.client;
 import com.epam.resource.dto.StorageDataDto;
 import com.epam.resource.dto.StorageType;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.micrometer.tracing.Span;
+import io.micrometer.tracing.Tracer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,16 +27,24 @@ public class StorageServiceClient {
 
     private final RestTemplate restTemplate;
     private final String STORAGE_SERVICE_URL;
+    private final Tracer tracer;
 
     @Autowired
     public StorageServiceClient(RestTemplateBuilder restTemplateBuilder,
-                                @Value("${cloud.gateway.host}") String cloudGatewayHost) {
+                                @Value("${cloud.gateway.host}") String cloudGatewayHost,
+                                Tracer tracer) {
         this.restTemplate = restTemplateBuilder.build();
         STORAGE_SERVICE_URL = "http://" + cloudGatewayHost + ":8080/storages";
+        this.tracer = tracer;
     }
 
     @CircuitBreaker(name = "storageServiceCircuitBreaker", fallbackMethod = "getStorageByTypeFallback")
     public StorageDataDto getStorageByType(StorageType storageType) {
+        Span currentSpan = tracer.currentSpan();
+        if (currentSpan != null) {
+            log.info("Trace ID in StorageServiceClient: {}, Span ID: {}", currentSpan.context().traceId(), currentSpan.context().spanId());
+        }
+
         try {
             UriComponents uriComponents = UriComponentsBuilder
                     .fromUriString(STORAGE_SERVICE_URL)

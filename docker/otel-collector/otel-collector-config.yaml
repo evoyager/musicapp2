@@ -1,0 +1,27 @@
+extensions:
+  zpages:
+    endpoint: host.docker.internal:55679
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: zipkin:9411
+
+processors:
+  batch:
+
+exporters:
+  zipkin:
+    endpoint: zipkin:9411/api/v2/spans
+  debug:
+    verbosity: detailed
+  prometheusremotewrite:
+    endpoint: http://prometheus:9090/api/v1/push
+
+service:
+  pipelines:
+    metrics:
+      receivers: [ otlp ]
+      processors: [ batch ]
+      exporters: [ debug, logging, traces, prometheusremotewrite ]

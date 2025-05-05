@@ -1,0 +1,69 @@
+spring:
+  application:
+    name: resource-processor
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    virtual-host: vhost
+    username: rabbitmq
+    password: rabbitmq
+
+server:
+  port: 8082
+
+rabbitmq:
+  exchange: resourceExchange
+  queue:
+    resource:
+      service:
+        to:
+          processor: queue.resource.service.to.processor
+  routing:
+    key:
+      from:
+        resource:
+          service:
+            to:
+              processor: routing.key.from.resource.service.to.processor
+          processor:
+            to:
+              service: routing.key.from.resource.processor.to.service
+
+resource:
+  service:
+    host: ${RESOURCE_SERVICE_HOST:localhost}
+
+song:
+  service:
+    host: ${SONG_SERVICE_HOST:localhost}
+
+cloud:
+  gateway:
+    host: ${CLOUD_GATEWAY_HOST:localhost}
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka
+
+management:
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+      export:
+        enabled: true
+
+logging:
+  level:
+    io.micrometer.tracing.context: ERROR
+    io.micrometer.tracing: INFO

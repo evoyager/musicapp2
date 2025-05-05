@@ -1,0 +1,129 @@
+spring:
+  application:
+    name: resource-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/resource_db}
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    hibernate:
+      ddl-auto: none
+    show-sql: true
+  sql:
+    init:
+      mode: never
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    username: rabbitmq
+    password: rabbitmq
+    virtual-host: vhost
+  cloud:
+    gateway:
+      metrics:
+        enabled: true
+
+
+aws:
+  accessKey: secret
+  secretKey: secret
+  serviceEndpoint: http://${LOCALSTACK_HOST:localhost}:4566
+  signingRegion: eu-central-2
+
+server:
+  port: 8081
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka
+
+cloud:
+  gateway:
+    host: ${CLOUD_GATEWAY_HOST:localhost}
+
+rabbitmq:
+  exchange: resourceExchange
+  queue:
+    resource:
+      processor:
+        to:
+          service: queue.resource.processor.to.service
+  routing:
+    key:
+      from:
+        resource:
+          processor:
+            to:
+              service: routing.key.from.resource.processor.to.service
+          service:
+            to:
+              processor: routing.key.from.resource.service.to.processor
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  health:
+    circuitbreakers:
+      enabled: true
+    ratelimiters:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+      export:
+        enabled: true
+
+
+  #    zipkin:
+#      tracing:
+#        endpoint: http://localhost:4318/v1/traces
+#        encoding: PROTO3
+#
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          client:
+            requests: true
+          server:
+            requests: true
+
+exporter:
+  zipkin:
+    endpoint: http://zipkin:9411/api/v2/spans
+
+logging:
+  level:
+    io.micrometer.tracing.context: ERROR
+    io.micrometer.tracing: INFO
+#    io.opentelemetry: DEBUG
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 5000ms
+        minimum-number-of-calls: 5
+        automatic-transition-from-open-to-half-open-enabled: true
+    instances:
+      storageServiceCircuitBreaker:
+        base-config: default

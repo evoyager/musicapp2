@@ -4,6 +4,7 @@ import com.epam.storage.dto.CreateStorageRequest;
 import com.epam.storage.dto.StorageData;
 import com.epam.storage.exceptions.InvalidCsvException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.tracing.Tracer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.core.ResponseInputStream;
@@ -26,13 +27,20 @@ public class S3StorageService {
 
     private final S3Client s3Client;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final Tracer tracer;
 
-    public S3StorageService(S3Client s3Client) {
+    public S3StorageService(S3Client s3Client, Tracer tracer) {
         this.s3Client = s3Client;
         createBucketIfNotExists(METADATA_BUCKET_NAME);
+        this.tracer = tracer;
     }
 
     public CreateBucketResponse createBucketIfNotExists(String bucketName) {
+//        String traceId = tracer.currentSpan().context().traceId();
+//        String spanId = tracer.currentSpan().context().spanId();
+//
+//        log.info("Trace ID in S3StorageService: [{}], Span ID: [{}]", traceId , spanId);
+
         try {
             s3Client.headBucket(HeadBucketRequest.builder().bucket(bucketName).build());
         } catch (NoSuchBucketException e) {
@@ -54,11 +62,17 @@ public class S3StorageService {
         StorageData storageData = new StorageData(id, request.getStorageType(), bucketName, request.getPath());
         saveMetadataToS3(id, storageData);
 
+        log.info("Storage created in S3: [{}]", storageData);
+
         return id;
     }
 
     public List<Bucket> listBuckets() {
-        return s3Client.listBuckets().buckets();
+        List<Bucket> result = s3Client.listBuckets().buckets();
+
+        log.info("Buckets retrieved from S3: [{}]", result);
+
+        return result;
     }
 
     public List<StorageData> getAllStorages() {
@@ -81,12 +95,18 @@ public class S3StorageService {
             throw new RuntimeException("Failed to retrieve storages from S3", e);
         }
 
+        log.info("Storages retrieved from S3: [{}]", storages);
+
         return storages;
     }
 
     public StorageData getStorageByType(String storageType) {
         List<StorageData> storages = getAllStorages();
-        return storages.stream().filter(storageData -> storageType.equals(storageData.getStorageType())).findFirst().get();
+        var result = storages.stream().filter(storageData -> storageType.equals(storageData.getStorageType())).findFirst().get();
+
+        log.info("Storage fetched by type [{}] from S3: [{}]", storageType, result);
+
+        return result;
     }
 
     public DeleteBucketResponse deleteBucket(String bucketName) {
@@ -96,10 +116,10 @@ public class S3StorageService {
 
         try {
             var response = s3Client.deleteBucket(deleteBucketRequest);
-            log.info("Bucket deleted: {}", deleteBucketRequest.bucket());
+            log.info("Bucket deleted: [{}]", deleteBucketRequest.bucket());
             return response;
         } catch (S3Exception e) {
-            log.error("Error deleting bucket: {}", e.awsErrorDetails().errorMessage());
+            log.error("Error deleting bucket: [{}]", e.awsErrorDetails().errorMessage());
         }
         return null;
     }
@@ -125,7 +145,7 @@ public class S3StorageService {
 
         try {
             var response = s3Client.deleteObject(deleteObjectRequest);
-            log.info("Object deleted: {}", deleteObjectRequest.key());
+            log.info("Object deleted: [{}]", deleteObjectRequest.key());
             return response;
         } catch (Exception e) {
             log.error(String.format("Error deleting object with key: [%s], from bucket: [%s]. Reason: ", bucketName, bucketName), e.getMessage());

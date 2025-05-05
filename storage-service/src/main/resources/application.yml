@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: storage-service
+
+server:
+  port: 8085
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://${EUREKA_HOST:localhost}:8761/eureka
+
+aws:
+  accessKey: secret
+  secretKey: secret
+  serviceEndpoint: http://${LOCALSTACK_HOST:localhost}:4566
+  signingRegion: eu-central-2
+
+management:
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://zipkin:9411/api/v2/spans
+      export:
+        enabled: true
+
+logging:
+  level:
+    io.micrometer.tracing.context: ERROR
+    io.micrometer.tracing: INFO
