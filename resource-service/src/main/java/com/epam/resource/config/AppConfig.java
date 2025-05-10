@@ -1,24 +1,19 @@
 package com.epam.resource.config;
 
 import com.epam.resource.exceptions.listener.DefaultListenerSupport;
-import org.springframework.boot.web.client.RestTemplateBuilder;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.retry.annotation.EnableRetry;
 import org.springframework.retry.backoff.FixedBackOffPolicy;
 import org.springframework.retry.policy.SimpleRetryPolicy;
 import org.springframework.retry.support.RetryTemplate;
-import org.springframework.web.client.RestTemplate;
 
 // tag::encoder[]
+@Slf4j
 @Configuration
 @EnableRetry
 public class AppConfig {
-
-    @Bean
-    RestTemplate restTemplate(RestTemplateBuilder builder) {
-        return builder.build();
-    }
 
 //    @Bean
 //    BytesEncoder<MutableSpan> otlpMutableSpanBytesEncoder() {

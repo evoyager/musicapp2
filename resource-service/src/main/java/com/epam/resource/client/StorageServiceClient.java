@@ -8,15 +8,17 @@ import io.micrometer.tracing.Tracer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.URI;
+import java.util.Optional;
 
 import static com.epam.resource.dto.StorageType.PERMANENT;
 import static com.epam.resource.dto.StorageType.STAGING;
@@ -30,10 +32,10 @@ public class StorageServiceClient {
     private final Tracer tracer;
 
     @Autowired
-    public StorageServiceClient(RestTemplateBuilder restTemplateBuilder,
+    public StorageServiceClient(RestTemplate restTemplate,
                                 @Value("${cloud.gateway.host}") String cloudGatewayHost,
                                 Tracer tracer) {
-        this.restTemplate = restTemplateBuilder.build();
+        this.restTemplate = restTemplate;
         STORAGE_SERVICE_URL = "http://" + cloudGatewayHost + ":8080/storages";
         this.tracer = tracer;
     }
@@ -52,6 +54,16 @@ public class StorageServiceClient {
                     .encode()
                     .build();
             URI uri = uriComponents.expand(storageType).toUri();
+
+//            var bearerToken = extractTokenFromSecurityContext();
+//
+//            HttpHeaders headers = new HttpHeaders();
+//            headers.set("Authorization", "Bearer " + bearerToken.get());
+//
+//            // Create the HTTP Entity (headers only, no body for GET requests)
+//            HttpEntity<Void> entity = new HttpEntity<>(headers);
+//
+//            ResponseEntity<StorageDataDto> response = restTemplate.exchange(uri, GET, entity, StorageDataDto.class);
             ResponseEntity<StorageDataDto> response = restTemplate.getForEntity(uri, StorageDataDto.class);
 
             if (response.getStatusCode() == HttpStatus.OK) {
@@ -69,6 +81,14 @@ public class StorageServiceClient {
             log.error("Error occurred while fetching storage data: " + e.getMessage());
             throw e;
         }
+    }
+
+    private Optional<String> extractTokenFromSecurityContext() {
+        var authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication instanceof JwtAuthenticationToken jwtToken) {
+            return Optional.of(jwtToken.getToken().getTokenValue());
+        }
+        return Optional.empty();
     }
 
     public StorageDataDto getStorageByTypeFallback(StorageType storageType, Throwable throwable) {
