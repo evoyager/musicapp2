@@ -1,0 +1,34 @@
+server:
+  port: 8091
+
+spring:
+  application:
+    name: api-client
+  security:
+    oauth2:
+      client:
+        registration:
+          api-client:
+            provider: auth-server
+            client-id: api-client
+            client-secret: apisecret
+            authorization-grant-type: authorization_code
+            redirect-uri: "http://127.0.0.1:8091/login/oauth2/code/api-client"
+            scope: read, write, openid
+            client-name: api-client
+        #          api-client-authorization-code:
+        #            provider: spring
+        #            client-id: api-client
+        #            client-secret: apisecret
+        #            authorization-grant-type: authorization_code
+        #            redirect-uri: "http://127.0.0.1:8091/authorized"
+        #            scope: read
+        #            client-name: api-client-authorization-code
+        provider:
+          auth-server:
+            issuer-uri: http://auth-server:9000
+
+logging:
+  level:
+    org.thymeleaf: DEBUG
+    org.springframework.web: DEBUG

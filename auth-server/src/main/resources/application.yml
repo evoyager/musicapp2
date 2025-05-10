@@ -1,0 +1,63 @@
+server:
+  port: 9000
+#  servlet:
+#    context-path: /api/auth
+
+logging:
+  level:
+    org.springframework.security: ERROR
+
+spring:
+  application:
+    name: auth-server
+  security:
+    oauth2:
+      authorizationserver:
+        issuer: http://auth-server:9000
+        client:
+          resource-service:
+            registration:
+              client-id: resource-service
+              client-secret: "{noop}resourcesecret"
+              client-name: Resource Service
+              client-authentication-methods:
+                - client_secret_basic
+              authorization-grant-types:
+                - client_credentials
+              scopes:
+                - read
+                - write
+          storage-service:
+            registration:
+              client-id: storage-service
+              client-secret: "{noop}storagesecret"
+              client-name: Storage Service
+              client-authentication-methods:
+                - client_secret_basic
+              authorization-grant-types:
+                - client_credentials
+              redirect-uris:
+                - http://127.0.0.1:8085/login/oauth2/code/storage-service-oidc
+                - http://127.0.0.1:8085/authorized
+              scopes:
+                - openid
+                - read
+                - write
+          api-client:
+            registration:
+              client-id: api-client
+              client-secret: "{noop}apisecret"
+              client-name: API Client
+              client-authentication-methods:
+                - client_secret_basic
+              authorization-grant-types:
+                - authorization_code
+                - refresh_token
+              redirect-uris:
+                - http://127.0.0.1:8091/login/oauth2/code/api-client
+              #                - http://127.0.0.1:8091/authorized
+              scopes:
+                - openid
+                - read
+                - write
+

@@ -1,3 +1,6 @@
+server:
+  port: 8081
+
 spring:
   application:
     name: resource-service
@@ -26,6 +29,11 @@ spring:
     gateway:
       metrics:
         enabled: true
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://auth-server:9000
 
 
 aws:
@@ -33,9 +41,6 @@ aws:
   secretKey: secret
   serviceEndpoint: http://${LOCALSTACK_HOST:localhost}:4566
   signingRegion: eu-central-2
-
-server:
-  port: 8081
 
 eureka:
   client:
@@ -86,7 +91,7 @@ management:
       probability: 1.0
   zipkin:
     tracing:
-      endpoint: http://zipkin:9411/api/v2/spans
+      endpoint: http://${ZIPKIN_HOST:localhost}:9411/api/v2/spans
       export:
         enabled: true
 
@@ -114,6 +119,7 @@ logging:
     io.micrometer.tracing.context: ERROR
     io.micrometer.tracing: INFO
 #    io.opentelemetry: DEBUG
+    org.springframework.security: ERROR
 
 resilience4j:
   circuitbreaker:
