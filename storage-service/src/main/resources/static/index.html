@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storage Operations</title>
+</head>
+<body>
+
+<p id="findTokenResult"></p>
+
+<h1>Create Bucket</h1>
+
+<form id="createBucketForm">
+    <label for="bucketName">Bucket Name:</label>
+    <input type="text" id="bucketName" name="bucketName" required>
+    <br><br>
+    <button type="button" onclick="createBucket()">Create Bucket</button>
+</form>
+
+<p id="createBucketResult"></p>
+
+
+<h1>Get Buckets List</h1>
+
+<form id="listBucketsForm">
+    <button type="button" onclick="listBuckets()">Get Buckets List</button>
+</form>
+
+<p id="bucketLoadingMessage" style="display: none;">Loading buckets...</p>
+
+<ul id="buckets">
+</ul>
+
+<script>
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("token");
+
+    console.log("Token:", token);
+
+    if (!token) {
+        document.getElementById("findTokenResult").innerText = "No token found! Please login again.";
+        document.getElementById("createBucketForm").style.display = "none";
+        document.getElementById("listBucketsForm").style.display = "none";
+    } else {
+        document.getElementById("findTokenResult").style.display = "none";
+    }
+
+
+    async function createBucket() {
+        const bucketName = document.getElementById("bucketName").value;
+
+        const url = `http://127.0.0.1:8085/storages/${bucketName}`;
+
+        const options = {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        };
+
+        try {
+            const response = await fetch(url, options);
+
+            if (response.status === 200 || response.status === 201) {
+                document.getElementById("createBucketResult").innerText = `Bucket "${bucketName}" created successfully!`;
+            } else if (response.status === 403) {
+                document.getElementById("createBucketResult").innerText = `Access denied. Admin role required.`;
+            } else if (response.status === 401) {
+                document.getElementById("createBucketResult").innerText = `Unauthorized. Invalid or missing token.`;
+            } else {
+                const error = await response.text();
+                document.getElementById("createBucketResult").innerText = `Failed to create bucket: ${error}`;
+            }
+        } catch (err) {
+            document.getElementById("createBucketResult").innerText = `Error: ${err.message}`;
+        }
+    }
+
+    async function listBuckets() {
+        const url = `http://127.0.0.1:8085/storages/buckets`;
+
+        const options = {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        };
+
+        document.getElementById("bucketLoadingMessage").style.display = "block";
+
+        try {
+            const response = await fetch(url, options);
+
+            if (response.ok) {
+                const bucketList = await response.json();
+
+                document.getElementById("buckets").innerHTML = bucketList.map(bucketName =>
+                    `<li>${bucketName}</li>`
+                ).join("");
+
+                document.getElementById("bucketLoadingMessage").style.display = "none";
+            } else if (response.status === 403) {
+                document.getElementById("buckets").innerText = `Access denied. Admin role required.`;
+            } else if (response.status === 401) {
+                document.getElementById("buckets").innerText = `Unauthorized. Invalid or missing token.`;
+            } else {
+                const error = await response.text();
+                document.getElementById("buckets").innerText = `Failed to create bucket: ${error}`;
+            }
+        } catch (err) {
+            document.getElementById("buckets").innerText = `Error: ${err.message}`;
+        }
+    }
+</script>
+</body>
+</html>

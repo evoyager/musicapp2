@@ -122,6 +122,29 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./my-localstack-data:/persisted-data"
 
+  api-client:
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    env_file:
+      - .env
+    build:
+      context: ./api-client
+      dockerfile: Dockerfile
+    ports:
+      - "8091:8091"
+    depends_on:
+      - auth-server
+      - storage-service
+
+  auth-server:
+    extra_hosts: [ 'host.docker.internal:host-gateway' ]
+    env_file:
+      - .env
+    build:
+      context: ./auth-server
+      dockerfile: Dockerfile
+    ports:
+      - "9000:9000"
+
   storage-service:
     extra_hosts: [ 'host.docker.internal:host-gateway' ]
     env_file:

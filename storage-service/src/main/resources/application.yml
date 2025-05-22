@@ -1,9 +1,14 @@
+server:
+  port: 8085
+
 spring:
   application:
     name: storage-service
-
-server:
-  port: 8085
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://auth-server:9000
 
 eureka:
   client:
@@ -30,7 +35,7 @@ management:
       probability: 1.0
   zipkin:
     tracing:
-      endpoint: http://zipkin:9411/api/v2/spans
+      endpoint: http://${ZIPKIN_HOST:localhost}:9411/api/v2/spans
       export:
         enabled: true
 
@@ -38,3 +43,4 @@ logging:
   level:
     io.micrometer.tracing.context: ERROR
     io.micrometer.tracing: INFO
+    org.springframework.security: ERROR

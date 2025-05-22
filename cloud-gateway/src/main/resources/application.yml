@@ -46,6 +46,11 @@ spring:
           filters:
             - RewritePath=/actuator/storage-prometheus,/actuator/prometheus
 
+        #        - id: api-client
+        #          uri: lb://api-client
+        #          predicates:
+        #            - Path=/storages, /storages**, /storages/**
+
         - id: resource-processor-metrics
           uri: lb://resource-processor
           predicates:

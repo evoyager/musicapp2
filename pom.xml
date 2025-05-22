@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.epam</groupId>
+    <artifactId>musicapp2</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>musicapp2</name>
+    <description>musicapp2</description>
+
+    <modules>
+        <module>auth-server</module>
+        <module>cloud-gateway</module>
+        <module>eureka-service</module>
+        <module>resource-processor</module>
+        <module>resource-service</module>
+        <module>song-service</module>
+        <module>storage-service</module>
+    </modules>
+
+</project>
